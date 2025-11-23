@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__taskmaster-ai__initialize_project",
+      "mcp__taskmaster-ai__models"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
