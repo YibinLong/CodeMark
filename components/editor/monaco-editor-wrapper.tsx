@@ -5,12 +5,12 @@ import Editor, { type OnMount, type Monaco } from "@monaco-editor/react"
 import { useEditorStore } from "@/lib/stores/editor-store"
 import { useThreadStore } from "@/lib/stores/thread-store"
 import { iRangeToCodeRange, isCursorOnly } from "@/lib/selection"
+import { useInlineAnchors, inlineAnchorStyles } from "./inline-anchor"
 import type { editor } from "monaco-editor"
 
 export function MonacoEditorWrapper() {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
-  const [decorations, setDecorations] = useState<string[]>([])
   const [hasError, setHasError] = useState(false)
 
   const {
@@ -22,6 +22,16 @@ export function MonacoEditorWrapper() {
     setSelectedRange,
   } = useEditorStore()
   const { threads, activeThreadId, getThreadsByFile, createThread, openThread } = useThreadStore()
+
+  // Use inline anchors hook for thread decorations
+  useInlineAnchors({
+    editor: editorRef.current,
+    monaco: monacoRef.current,
+    threads: Array.from(threads.values()),
+    activeThreadId,
+    activeFileId,
+    onThreadClick: openThread,
+  })
 
   // Handle editor mount
   const handleEditorMount: OnMount = (editor, monaco) => {
@@ -86,19 +96,6 @@ export function MonacoEditorWrapper() {
       },
     })
 
-    editor.onMouseDown((e) => {
-      if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
-        const lineNumber = e.target.position?.lineNumber
-        if (lineNumber && activeFileId) {
-          // Find thread at this line
-          const thread = getThreadsByFile(activeFileId).find((t) => t.range?.startLine === lineNumber)
-          if (thread) {
-            openThread(thread.id)
-          }
-        }
-      }
-    })
-
     // Selection change listener
     editor.onDidChangeCursorSelection((e) => {
       const selection = e.selection
@@ -145,42 +142,6 @@ export function MonacoEditorWrapper() {
         setSelectedRange(null)
       }
     })
-
-    // Add gutter icons for threads
-    updateGutterDecorations()
-  }
-
-  // Update decorations when threads change
-  useEffect(() => {
-    updateGutterDecorations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, activeFileId, activeThreadId])
-
-  const updateGutterDecorations = () => {
-    if (!editorRef.current || !monacoRef.current || !activeFileId) return
-
-    const fileThreads = getThreadsByFile(activeFileId)
-    const decorationsArray: editor.IModelDeltaDecoration[] = []
-
-    fileThreads.forEach((thread) => {
-      if (!thread.range) return
-
-      const isActive = thread.id === activeThreadId
-
-      // Add line decoration for the thread range
-      decorationsArray.push({
-        range: new monacoRef.current!.Range(thread.range.startLine, 1, thread.range.endLine, 1),
-        options: {
-          isWholeLine: true,
-          className: isActive ? "thread-line-active" : "thread-line",
-          glyphMarginClassName: isActive ? "thread-glyph-active" : "thread-glyph",
-          glyphMarginHoverMessage: { value: `**Thread** (${thread.messages.length} messages)` },
-        },
-      })
-    })
-
-    const newDecorations = editorRef.current.deltaDecorations(decorations, decorationsArray)
-    setDecorations(newDecorations)
   }
 
   // Handle editor content changes
@@ -195,41 +156,7 @@ export function MonacoEditorWrapper() {
   // Add CSS for thread decorations
   useEffect(() => {
     const style = document.createElement("style")
-    style.textContent = `
-      .thread-line {
-        background: rgba(91, 158, 255, 0.1);
-      }
-      .thread-line-active {
-        background: rgba(91, 158, 255, 0.2);
-        border-left: 2px solid #5B9EFF;
-      }
-      .thread-glyph {
-        background: #2a5a8a !important;
-        width: 16px !important;
-        height: 16px !important;
-        border-radius: 3px;
-        margin-left: 4px;
-        margin-top: 4px;
-        cursor: pointer;
-      }
-      .thread-glyph-active {
-        background: #5B9EFF !important;
-        width: 16px !important;
-        height: 16px !important;
-        border-radius: 3px;
-        margin-left: 4px;
-        margin-top: 4px;
-        cursor: pointer;
-      }
-      .thread-glyph::before,
-      .thread-glyph-active::before {
-        content: "💬";
-        font-size: 10px;
-        position: absolute;
-        top: 1px;
-        left: 2px;
-      }
-    `
+    style.textContent = inlineAnchorStyles
     document.head.appendChild(style)
     return () => {
       document.head.removeChild(style)
