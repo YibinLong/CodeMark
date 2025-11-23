@@ -17,10 +17,9 @@ export function MonacoEditorWrapper() {
     setEditorContent,
     activeFileId,
     updateFileContent,
-    selectedRange,
     setSelectedRange,
   } = useEditorStore()
-  const { threads, activeThreadId, setActiveThread, getThreadsByFile, createThread, openThread } = useThreadStore()
+  const { threads, activeThreadId, getThreadsByFile, createThread, openThread } = useThreadStore()
 
   // Handle editor mount
   const handleEditorMount: OnMount = (editor, monaco) => {
@@ -84,7 +83,7 @@ export function MonacoEditorWrapper() {
         const lineNumber = e.target.position?.lineNumber
         if (lineNumber && activeFileId) {
           // Find thread at this line
-          const thread = getThreadsByFile(activeFileId).find((t) => t.range.startLine === lineNumber)
+          const thread = getThreadsByFile(activeFileId).find((t) => t.range?.startLine === lineNumber)
           if (thread) {
             openThread(thread.id)
           }
@@ -99,6 +98,7 @@ export function MonacoEditorWrapper() {
   // Update decorations when threads change
   useEffect(() => {
     updateGutterDecorations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threads, activeFileId, activeThreadId])
 
   const updateGutterDecorations = () => {
