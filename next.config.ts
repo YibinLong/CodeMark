@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack configuration (required for Next.js 16+)
+  // Empty config to silence webpack/turbopack warning
+  turbopack: {},
   webpack: (config, { isServer }) => {
     // Monaco Editor worker configuration
     // Copy Monaco workers to /_next/static for proper loading
