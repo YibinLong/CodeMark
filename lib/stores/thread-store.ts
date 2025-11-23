@@ -22,6 +22,7 @@ interface ThreadState {
   updateMessage: (threadId: string, messageId: string, updates: Partial<Message>) => void
   setActiveThread: (threadId: string | null) => void
   resolveThread: (threadId: string) => void
+  unresolveThread: (threadId: string) => void
   deleteThread: (threadId: string) => void
   getThreadsByFile: (fileId: string) => Thread[]
   getThreadByRange: (fileId: string, line: number) => Thread | undefined
@@ -180,6 +181,18 @@ export const useThreadStore = create<ThreadState>()(
           if (!thread) return state
 
           const newThread = { ...thread, status: "resolved" as const }
+          const newThreads = new Map(state.threads)
+          newThreads.set(threadId, newThread)
+          return { threads: newThreads }
+        })
+      },
+
+      unresolveThread: (threadId) => {
+        set((state) => {
+          const thread = state.threads.get(threadId)
+          if (!thread) return state
+
+          const newThread = { ...thread, status: "active" as const }
           const newThreads = new Map(state.threads)
           newThreads.set(threadId, newThread)
           return { threads: newThreads }
