@@ -113,7 +113,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -126,8 +126,62 @@
         "dependencies": [
           4
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install Zustand dependencies and create store structure",
+            "description": "Install zustand@4.4+ and create the initial store structure with proper TypeScript types and store slices",
+            "dependencies": [],
+            "details": "Run npm install zustand@4.4+ and create lib/stores/reviewStore.ts. Define TypeScript interfaces for store state including threads, selections, and UI state. Create separate store slices for threads management (ThreadsSlice), selections tracking (SelectionsSlice), and UI state (UISlice). Set up proper type definitions and initial state values for each slice.",
+            "status": "done",
+            "testStrategy": "Test store initialization and verify TypeScript types are properly defined. Validate initial state values are correctly set."
+          },
+          {
+            "id": 2,
+            "title": "Implement core store slices and actions",
+            "description": "Create store slices for threads management, selections tracking, and UI state with all necessary actions",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement ThreadsSlice with actions for add, update, delete, and mark resolved. Create SelectionsSlice for tracking code selections with add, remove, and clear actions. Implement UISlice for managing active thread, composer visibility, and other UI state. Use Zustand's immer middleware for immutable state updates and proper action definitions.",
+            "status": "done",
+            "testStrategy": "Test all store actions work correctly and state updates are immutable. Verify actions properly modify the intended state slices without side effects."
+          },
+          {
+            "id": 3,
+            "title": "Configure persistence middleware with localStorage",
+            "description": "Set up Zustand persist middleware with localStorage, custom serialization, and file fingerprint-based namespacing",
+            "dependencies": [
+              2
+            ],
+            "details": "Configure persist middleware with 'codemark-threads' key and custom serialization for Date objects. Implement file fingerprint-based namespacing to scope persistence to specific files or projects. Set up proper storage configuration with version migration support and selective persistence (exclude temporary UI state). Configure custom serialization/deserialization functions to handle complex objects.",
+            "status": "done",
+            "testStrategy": "Test state persistence across browser sessions and verify proper hydration on app restart. Validate custom serialization works correctly for Date objects and complex state."
+          },
+          {
+            "id": 4,
+            "title": "Implement error handling and storage fallback mechanisms",
+            "description": "Add error boundaries for localStorage quota exceeded scenarios with fallback to sessionStorage",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement try-catch blocks around localStorage operations with fallback to sessionStorage when quota is exceeded. Create error handling for storage unavailability (private browsing mode). Add user notifications for storage issues and graceful degradation when persistence fails. Implement storage cleanup mechanisms to manage quota limits and remove old data.",
+            "status": "done",
+            "testStrategy": "Test quota exceeded scenarios by filling localStorage and verify fallback to sessionStorage. Validate error handling when storage is unavailable and proper user feedback."
+          },
+          {
+            "id": 5,
+            "title": "Add performance optimization and cross-tab synchronization",
+            "description": "Configure subscribeWithSelector middleware for performance optimization and implement cross-tab state synchronization",
+            "dependencies": [
+              4
+            ],
+            "details": "Add subscribeWithSelector middleware to optimize re-renders by allowing selective subscriptions to specific state slices. Implement cross-tab synchronization using storage events to sync state changes across multiple browser tabs. Set up proper cleanup for event listeners and optimize subscription patterns to prevent memory leaks. Add throttling for frequent state updates.",
+            "status": "done",
+            "testStrategy": "Test performance optimizations by monitoring re-render counts and verify cross-tab synchronization works correctly. Validate cleanup mechanisms prevent memory leaks."
+          }
+        ]
       },
       {
         "id": 6,
@@ -140,7 +194,7 @@
           5,
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -429,7 +483,7 @@
     ],
     "metadata": {
       "created": "2025-11-23T04:53:55.708Z",
-      "updated": "2025-11-23T05:47:19.514Z",
+      "updated": "2025-11-23T06:02:45.622Z",
       "description": "Tasks for master context"
     }
   }
