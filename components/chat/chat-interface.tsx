@@ -42,7 +42,6 @@ export function ChatInterface() {
 
     try {
       // Add placeholder for AI response
-      const tempMessageId = `temp-${Date.now()}`
       addMessage(activeThread.id, {
         role: "assistant",
         content: "",

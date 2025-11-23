@@ -11,7 +11,7 @@ export function CodeCitation({ codeContext }: CodeCitationProps) {
     <div className="rounded-md border border-[#2a2a2a] bg-[#1a1a1a] p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-[#808080]">
-          Lines {codeContext.range.startLine}-{codeContext.range.endLine}
+          {codeContext.range ? `Lines ${codeContext.range.startLine}-${codeContext.range.endLine}` : "Code Context"}
         </span>
         <span className="text-xs text-[#5B9EFF]">{codeContext.language}</span>
       </div>
