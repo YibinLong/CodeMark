@@ -1,0 +1,436 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Set up Next.js project structure and configuration",
+        "description": "Initialize the Next.js 14 project with TypeScript, configure build settings, and set up environment variables structure",
+        "details": "Create Next.js 14 app using App Router with TypeScript template. Configure next.config.ts with Monaco worker support using webpack configuration to copy workers to /_next/static. Set up .env.example with required variables (OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL, NEXT_PUBLIC_APP_NAME, DEBUG, MOCK_AI). Configure .gitignore for Node/Next patterns. Install core dependencies: next@14, react@18, typescript@5, @types/node, @types/react. Configure tsconfig.json with strict mode and path aliases for lib/* and components/*.",
+        "testStrategy": "Verify project builds successfully with 'npm run build', check that Monaco workers are copied to build output, validate environment variable loading in both development and production modes",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Install and configure UI dependencies",
+        "description": "Set up Tailwind CSS, shadcn/ui components, and design system foundations",
+        "details": "Install Tailwind CSS 3.4+ with Next.js integration, configure tailwind.config.js with shadcn/ui preset and custom color tokens. Install shadcn/ui CLI and initialize with components.json config. Add core shadcn components: button, input, textarea, card, dialog, toast, sidebar, badge. Install additional UI dependencies: @radix-ui/react-icons, class-variance-authority, clsx, tailwind-merge. Set up global CSS with Tailwind directives and custom CSS variables for theming.",
+        "testStrategy": "Verify Tailwind classes compile correctly, test shadcn/ui components render with proper styling, validate responsive design tokens work across breakpoints",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement Monaco Editor integration",
+        "description": "Set up Monaco Editor with TypeScript support, syntax highlighting, and selection capture capabilities",
+        "details": "Install @monaco-editor/react@4.6+ and monaco-editor@0.44+. Create components/CodeEditor.tsx using useMonaco hook with proper TypeScript definitions. Configure Monaco with multiple language support (typescript, javascript, python, java, go, rust, etc.) using built-in language services. Implement selection change listeners using editor.onDidChangeCursorSelection(). Create lib/selection.ts utilities to convert Monaco IRange to serializable CodeSelection objects. Add keyboard shortcuts (Cmd/Ctrl+Enter for review, Esc for cancel). Handle Monaco worker loading with fallback to basic textarea on failure.",
+        "testStrategy": "Test syntax highlighting across multiple languages, verify selection metadata extraction accuracy, validate keyboard shortcuts work correctly, test fallback behavior when workers fail to load",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Install Monaco Editor dependencies and basic setup",
+            "description": "Install @monaco-editor/react@4.6+ and monaco-editor@0.44+ packages and create initial CodeEditor component structure",
+            "dependencies": [],
+            "details": "Run npm install @monaco-editor/react@4.6.0 monaco-editor@0.44.0. Create components/CodeEditor.tsx with basic Monaco Editor component using useMonaco hook. Set up proper TypeScript definitions and import statements. Create initial component props interface for code content, language, and onChange handlers.",
+            "status": "pending",
+            "testStrategy": "Verify packages install correctly, test basic editor renders without errors, validate TypeScript compilation passes"
+          },
+          {
+            "id": 2,
+            "title": "Configure TypeScript and multi-language support",
+            "description": "Set up Monaco Editor with TypeScript definitions and configure support for multiple programming languages",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure Monaco with built-in language services for typescript, javascript, python, java, go, rust, and other languages. Set up proper TypeScript compiler options and type definitions. Configure syntax highlighting themes and language-specific features like auto-completion and error checking.",
+            "status": "pending",
+            "testStrategy": "Test syntax highlighting works for all supported languages, verify TypeScript intellisense functions correctly, validate language switching updates highlighting properly"
+          },
+          {
+            "id": 3,
+            "title": "Implement selection change listeners",
+            "description": "Add event listeners to capture and handle Monaco Editor selection changes for code review functionality",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement editor.onDidChangeCursorSelection() event handler to capture selection changes. Create callback mechanism to notify parent components of selection updates. Handle both single cursor position and multi-line selection ranges. Include debouncing to prevent excessive callbacks during rapid selection changes.",
+            "status": "pending",
+            "testStrategy": "Test selection events fire correctly for various selection types, verify callback mechanism works with parent components, validate debouncing prevents performance issues"
+          },
+          {
+            "id": 4,
+            "title": "Create selection utilities for Monaco IRange conversion",
+            "description": "Build utility functions to convert Monaco Editor IRange objects to serializable CodeSelection format",
+            "dependencies": [
+              3
+            ],
+            "details": "Create lib/selection.ts with utilities to convert Monaco IRange to CodeSelection objects with line numbers, column positions, and selected text content. Include functions for reverse conversion from CodeSelection back to IRange. Add validation for range boundaries and proper serialization/deserialization methods.",
+            "status": "pending",
+            "testStrategy": "Test IRange to CodeSelection conversion accuracy, verify reverse conversion maintains exact positioning, validate serialization preserves all necessary data"
+          },
+          {
+            "id": 5,
+            "title": "Implement keyboard shortcuts and interaction handlers",
+            "description": "Add keyboard shortcuts for review actions and editor interaction including Cmd/Ctrl+Enter for review and Esc for cancel",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement keyboard event handlers for Cmd/Ctrl+Enter to trigger code review submission and Esc to cancel current selection. Add cross-platform key detection for Windows/Mac compatibility. Create proper event propagation handling to prevent conflicts with Monaco's built-in shortcuts.",
+            "status": "pending",
+            "testStrategy": "Test keyboard shortcuts work correctly on both Windows and Mac platforms, verify no conflicts with Monaco built-in shortcuts, validate proper event propagation and cancellation"
+          },
+          {
+            "id": 6,
+            "title": "Implement Monaco worker fallback and error handling",
+            "description": "Create fallback mechanisms for Monaco worker loading failures with graceful degradation to basic textarea",
+            "dependencies": [
+              5
+            ],
+            "details": "Implement try-catch blocks around Monaco worker initialization with fallback to basic textarea component. Add error detection for worker loading failures and network issues. Create fallback UI that maintains core functionality without advanced Monaco features. Include user notifications for degraded mode operation.",
+            "status": "pending",
+            "testStrategy": "Test fallback behavior when Monaco workers fail to load, verify basic functionality remains available in degraded mode, validate user notifications display appropriately"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Define TypeScript data models and types",
+        "description": "Create comprehensive type definitions for code selections, threads, messages, and AI responses",
+        "details": "Create lib/types/review.ts with interfaces: CodeSelection (id, startLine, startCol, endLine, endCol, language, previewSnippet), Thread (id, selectionId, prompt, messages, status, createdAt, updatedAt), Message (id, role: 'user' | 'assistant', content, createdAt), OpenAIResponse (threadId, chunks). Add utility types for API payloads and store state. Define enums for ThreadStatus ('open', 'resolved', 'error') and MessageRole. Include JSDoc comments for AI assistant context.",
+        "testStrategy": "Validate all types compile without errors, ensure type safety across component boundaries, test type inference in IDE",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Zustand store with persistence",
+        "description": "Set up Zustand state management with localStorage persistence for threads and selections",
+        "details": "Install zustand@4.4+ and create lib/stores/reviewStore.ts. Implement store slices for: threads management (add, update, delete, mark resolved), selections tracking, UI state (active thread, composer visibility). Configure persist middleware with 'codemark-threads' key, custom serialization for Date objects, and file fingerprint-based namespacing. Add subscribeWithSelector middleware for performance optimization. Include error boundaries for localStorage quota exceeded scenarios with fallback to sessionStorage.",
+        "testStrategy": "Test store persistence across browser sessions, verify state hydration without SSR mismatches, validate quota exceeded error handling, test fallback behavior when localStorage unavailable",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Create thread composer UI component",
+        "description": "Build inline thread composer with form validation and user experience optimizations",
+        "details": "Create components/ThreadComposer.tsx using shadcn/ui form components. Implement controlled textarea with character counter (min 3, max 500 chars). Add selection preview showing line numbers and code snippet. Include submit/cancel buttons with proper loading states. Implement optimistic UI updates while awaiting AI response. Add keyboard shortcuts and auto-resize textarea. Use React Hook Form with zod validation for form handling.",
+        "testStrategy": "Test form validation edge cases, verify keyboard shortcuts work correctly, validate optimistic UI updates, test responsive design on mobile devices",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Build thread list and inline rendering components",
+        "description": "Create components for displaying and managing thread conversations inline with code",
+        "details": "Create components/ThreadList.tsx for sidebar thread overview with filtering (open/resolved). Build components/InlineAnchor.tsx for gutter markers and hover highlights tied to code selections. Implement components/ThreadCard.tsx with expandable messages, timestamps, and action buttons (resolve/unresolve, delete). Add visual indicators for thread status and AI response streaming. Use intersection observer for performance with many threads. Include accessibility features (ARIA labels, keyboard navigation).",
+        "testStrategy": "Test thread filtering and sorting, verify inline anchors position correctly with editor scrolling, validate accessibility with screen readers, test performance with 50+ threads",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create ThreadList component with filtering and sorting",
+            "description": "Build the main sidebar component that displays an overview of all threads with filtering capabilities for open/resolved status and sorting options",
+            "dependencies": [],
+            "details": "Create components/ThreadList.tsx with useState for filter state (all/open/resolved), implement sorting by date/status/priority. Add search functionality with debounced input. Use virtualization for performance with large thread counts. Include loading states and empty state handling.",
+            "status": "pending",
+            "testStrategy": "Test filtering works correctly for all states, verify sorting maintains correct order, validate search functionality with edge cases, test performance with 100+ threads"
+          },
+          {
+            "id": 2,
+            "title": "Build InlineAnchor component for gutter markers",
+            "description": "Create component that renders clickable markers in the code editor gutter tied to specific line ranges and code selections",
+            "dependencies": [
+              1
+            ],
+            "details": "Create components/InlineAnchor.tsx with positioning logic for editor gutters. Implement hover effects and click handlers. Add visual indicators for thread status (open/resolved/has-replies). Handle editor scrolling and viewport changes. Use portal rendering for proper z-index layering.",
+            "status": "pending",
+            "testStrategy": "Test anchor positioning with editor scrolling, verify click handlers work correctly, validate hover states and visual indicators, test with different editor themes"
+          },
+          {
+            "id": 3,
+            "title": "Implement ThreadCard component with expandable messages",
+            "description": "Build the individual thread display component with expandable message content, timestamps, and action buttons",
+            "dependencies": [
+              2
+            ],
+            "details": "Create components/ThreadCard.tsx with collapsible message content using shadcn/ui Collapsible. Add timestamp formatting with relative dates. Implement action buttons for resolve/unresolve and delete with confirmation. Include avatar display for message authors and message threading.",
+            "status": "pending",
+            "testStrategy": "Test message expansion/collapse functionality, verify action buttons trigger correct operations, validate timestamp formatting, test responsive design on mobile"
+          },
+          {
+            "id": 4,
+            "title": "Add visual indicators for streaming and thread status",
+            "description": "Implement real-time visual feedback for AI response streaming and clear thread status indicators",
+            "dependencies": [
+              3
+            ],
+            "details": "Add streaming indicators with animated dots or spinner during AI responses. Implement status badges (open/resolved/pending) with color coding. Add typing indicators when AI is responding. Include visual feedback for user actions (optimistic updates). Use CSS transitions for smooth state changes.",
+            "status": "pending",
+            "testStrategy": "Test streaming indicators appear during AI responses, verify status badges update correctly, validate optimistic UI updates, test animations work smoothly across browsers"
+          },
+          {
+            "id": 5,
+            "title": "Implement performance optimization with intersection observer",
+            "description": "Add intersection observer for efficient rendering and scrolling performance when handling many threads",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement intersection observer for lazy loading thread cards outside viewport. Add virtualization for thread list when count exceeds 50 items. Optimize re-renders with React.memo and useMemo. Implement debounced scroll handling and efficient DOM updates.",
+            "status": "pending",
+            "testStrategy": "Test performance with 200+ threads, verify intersection observer works correctly, validate virtualization maintains scroll position, benchmark rendering performance"
+          },
+          {
+            "id": 6,
+            "title": "Add comprehensive accessibility implementation",
+            "description": "Implement full accessibility features including ARIA labels, keyboard navigation, and screen reader support",
+            "dependencies": [
+              5
+            ],
+            "details": "Add ARIA labels for all interactive elements and thread states. Implement keyboard navigation (Tab, Arrow keys, Enter, Escape). Add focus management for modal dialogs and thread expansion. Include screen reader announcements for state changes. Ensure color contrast meets WCAG 2.1 AA standards.",
+            "status": "pending",
+            "testStrategy": "Test with screen readers (NVDA, JAWS), verify keyboard navigation flows work correctly, validate ARIA labels are descriptive, test color contrast ratios"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement OpenAI API client and prompt engineering",
+        "description": "Create AI client with streaming support and context-aware prompt templates",
+        "details": "Install openai@4.20+ and create lib/ai/client.ts with OpenAI SDK wrapper. Implement streaming chat completions with abort controller support. Create lib/ai/prompt.ts with system prompt templates that include code context, language detection, and user instruction formatting. Add retry logic with exponential backoff for rate limits. Implement token counting and context truncation to stay under model limits (8k for gpt-4o-mini). Include MOCK_AI mode for development without API costs.",
+        "testStrategy": "Test streaming responses work correctly, verify prompt templates generate contextual responses, validate retry logic handles rate limits, test mock mode functionality",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Create Next.js API route for AI review processing",
+        "description": "Build server-side API endpoint that handles review requests and streams AI responses",
+        "details": "Create app/api/review/route.ts handling POST requests with payload validation using zod. Implement request/response logging with request IDs for traceability. Add error handling for missing API keys, rate limits, and timeouts (30s abort). Stream OpenAI responses using ReadableStream and proper CORS headers. Include request sanitization and prompt injection protection. Add DEBUG namespace logging for troubleshooting.",
+        "testStrategy": "Test API endpoint with valid/invalid payloads, verify streaming responses work in browser, validate error handling for all edge cases, test CORS configuration",
+        "priority": "high",
+        "dependencies": [
+          8,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement client-side AI integration",
+        "description": "Connect frontend components to AI API with proper error handling and loading states",
+        "details": "Create lib/hooks/useAIReview.ts custom hook for managing AI requests. Implement fetch-based streaming with ReadableStreamDefaultReader for progressive message updates. Add error handling for network failures, timeouts, and API errors with user-friendly messages. Update Zustand store with streaming chunks and final responses. Include retry mechanisms and request cancellation. Add toast notifications for errors and completion.",
+        "testStrategy": "Test streaming updates in real-time, verify error states display correctly, validate request cancellation works properly, test retry mechanisms with various failure scenarios",
+        "priority": "high",
+        "dependencies": [
+          9,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Build main application layout and routing",
+        "description": "Create the main app layout with editor, sidebar, and responsive design",
+        "details": "Create app/page.tsx as main application entry point. Build app/layout.tsx with proper metadata, font loading (Inter), and global providers (Zustand, Toast). Implement responsive layout with resizable panels using react-resizable-panels. Create components/AppShell.tsx with header, editor area, and collapsible sidebar. Add keyboard shortcuts for common actions and accessibility navigation. Include error boundaries and loading states.",
+        "testStrategy": "Test responsive behavior across device sizes, verify keyboard navigation works correctly, validate error boundaries catch component failures, test performance with large code files",
+        "priority": "medium",
+        "dependencies": [
+          7,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement thread management features",
+        "description": "Add functionality for resolving, deleting, and organizing threads with proper state management",
+        "details": "Extend thread store with resolve/unresolve actions and soft delete with confirmation modals. Implement thread search and filtering by status, date, or content. Add bulk operations (mark all as resolved, delete old threads). Create components/ThreadSidebar.tsx with drag-and-drop reordering. Implement keyboard shortcuts for thread navigation (j/k for up/down, Enter to open). Add export functionality for thread summaries as markdown.",
+        "testStrategy": "Test thread operations work correctly across all states, verify search and filtering performance, validate bulk operations complete successfully, test keyboard navigation flows",
+        "priority": "medium",
+        "dependencies": [
+          10,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Add persistence and data migration handling",
+        "description": "Implement robust localStorage management with versioning and migration support",
+        "details": "Create lib/storage.ts with versioned localStorage schema and migration utilities. Implement data cleanup for outdated threads (>30 days) and storage quota management. Add file fingerprinting using crypto.subtle.digest for content-based storage keys. Include data export/import functionality for backup and transfer. Handle storage events for cross-tab synchronization. Add compression for large thread data using built-in compression streams.",
+        "testStrategy": "Test data migrations work correctly between schema versions, verify quota management prevents browser storage errors, validate cross-tab synchronization, test backup/restore functionality",
+        "priority": "medium",
+        "dependencies": [
+          12,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design versioned localStorage schema and storage structure",
+            "description": "Create the foundational storage schema with versioning support for CodeMark data persistence",
+            "dependencies": [],
+            "details": "Design and implement a versioned localStorage schema in lib/storage.ts. Define storage keys, data structures for threads, code selections, and metadata. Include version tracking fields and schema validation. Create type definitions for StorageSchema, ThreadData, and CodeSelectionData. Implement schema validation using zod or similar for runtime type checking.",
+            "status": "pending",
+            "testStrategy": "Test schema validation with valid/invalid data, verify version tracking works correctly, validate type definitions match runtime data"
+          },
+          {
+            "id": 2,
+            "title": "Implement data migration utilities and version management",
+            "description": "Build migration system to handle schema changes and data format updates between versions",
+            "dependencies": [
+              1
+            ],
+            "details": "Create migration utilities in lib/storage.ts to handle version upgrades. Implement migration functions for each schema version change. Add rollback capabilities for failed migrations. Include data backup before migrations and recovery mechanisms. Create MigrationRunner class to orchestrate version transitions safely.",
+            "status": "pending",
+            "testStrategy": "Test migrations between all schema versions, verify rollback functionality works correctly, validate data integrity after migrations, test recovery from failed migrations"
+          },
+          {
+            "id": 3,
+            "title": "Implement storage quota management and data cleanup",
+            "description": "Add storage monitoring and cleanup mechanisms for managing browser storage limits",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement storage quota monitoring using StorageManager API. Create data cleanup utilities to remove threads older than 30 days. Add storage usage tracking and warnings before quota limits. Implement LRU cache eviction for large datasets. Create garbage collection for orphaned data and expired cache entries.",
+            "status": "pending",
+            "testStrategy": "Test quota monitoring accurately reports usage, verify cleanup removes old data correctly, validate LRU eviction maintains most recent data, test garbage collection clears orphaned entries"
+          },
+          {
+            "id": 4,
+            "title": "Add file fingerprinting with crypto.subtle for content-based keys",
+            "description": "Implement cryptographic hashing for generating unique storage keys based on content",
+            "dependencies": [
+              1
+            ],
+            "details": "Use crypto.subtle.digest API to generate SHA-256 hashes for file content fingerprinting. Create generateContentHash function in lib/storage.ts. Implement content-based storage keys to avoid duplicate storage. Add hash collision handling and fallback mechanisms. Include async hash generation with proper error handling for crypto API failures.",
+            "status": "pending",
+            "testStrategy": "Test hash generation produces consistent results for same content, verify collision handling works correctly, validate async operations handle errors gracefully, test fallback mechanisms when crypto API unavailable"
+          },
+          {
+            "id": 5,
+            "title": "Implement cross-tab synchronization with storage events",
+            "description": "Handle storage events for real-time synchronization between multiple browser tabs",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement storage event listeners for cross-tab synchronization. Create StorageEventHandler class to manage synchronization logic. Add conflict resolution for concurrent modifications. Implement optimistic updates with rollback on conflicts. Create tab identification system for coordination and lock-free synchronization patterns.",
+            "status": "pending",
+            "testStrategy": "Test synchronization works correctly across multiple tabs, verify conflict resolution maintains data consistency, validate optimistic updates rollback properly, test tab coordination under various scenarios"
+          },
+          {
+            "id": 6,
+            "title": "Add data compression and export/import functionality",
+            "description": "Implement compression for large datasets and backup/restore capabilities",
+            "dependencies": [
+              4,
+              5
+            ],
+            "details": "Implement data compression using CompressionStream API for large thread data. Create export/import functionality for backup and transfer. Add compression utilities in lib/storage.ts with gzip/deflate support. Implement JSON serialization with compression for export files. Create import validation and data restoration mechanisms with progress tracking.",
+            "status": "pending",
+            "testStrategy": "Test compression reduces storage size significantly, verify export/import maintains data integrity, validate compression/decompression performance, test import validation catches corrupted data"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Implement logging and debugging infrastructure",
+        "description": "Create comprehensive logging system for development and production debugging",
+        "details": "Create lib/logger.ts with namespace-based debugging using debug@4.3+. Implement lib/clientLogger.ts for browser-side logging with storage and filtering. Add request tracing with correlation IDs across client/server boundary. Include error reporting with stack traces and user context. Create development utilities panel (hidden behind NEXT_PUBLIC_ENABLE_DEVTOOLS) with log download and state inspection. Configure log levels and filtering for production builds.",
+        "testStrategy": "Test logging works correctly in development and production modes, verify log filtering and namespace controls, validate error reporting includes proper context, test development utilities functionality",
+        "priority": "low",
+        "dependencies": [
+          9,
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Add comprehensive error handling and user feedback",
+        "description": "Implement robust error boundaries, user notifications, and graceful degradation",
+        "details": "Create error boundary components with fallback UIs and error reporting. Implement toast notification system using sonner@1.4+ for success/error feedback. Add connection status monitoring and offline detection with appropriate UI feedback. Create graceful fallbacks for Monaco worker failures (textarea mode). Implement user-friendly error messages for common API failures (quota, authentication, network). Add loading skeletons and progressive enhancement.",
+        "testStrategy": "Test error boundaries catch and display errors correctly, verify toast notifications work across all scenarios, validate offline behavior and fallback modes, test loading states and progressive enhancement",
+        "priority": "medium",
+        "dependencies": [
+          11,
+          12
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Optimize performance and add monitoring",
+        "description": "Implement performance optimizations, code splitting, and monitoring for production readiness",
+        "details": "Implement code splitting for Monaco Editor using dynamic imports with loading boundaries. Add React.memo and useMemo optimizations for expensive components (thread lists, editor). Configure bundle analyzer and optimize chunk sizes. Implement performance monitoring with Core Web Vitals tracking. Add service worker for offline code viewing (read-only mode). Configure Vercel Analytics integration and error tracking setup for production monitoring.",
+        "testStrategy": "Measure and validate Core Web Vitals improvements, test code splitting reduces initial bundle size, verify offline functionality works correctly, validate monitoring captures performance metrics",
+        "priority": "low",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Create documentation and deployment preparation",
+        "description": "Prepare comprehensive documentation and deployment configuration for production",
+        "details": "Create detailed README.md with setup instructions, API key configuration, and usage examples. Document AI tool usage transparency as required. Create .env.example with all required variables and descriptions. Add deployment checklist and troubleshooting guide. Create TASK_LIST.md with epic/story/task hierarchy for future development. Configure Vercel deployment settings and environment variable templates. Add health check endpoint for monitoring.",
+        "testStrategy": "Verify documentation is complete and accurate, test deployment process using fresh environment, validate health checks work correctly, ensure all environment variables are documented",
+        "priority": "low",
+        "dependencies": [
+          16
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-11-23T04:53:55.708Z",
+      "updated": "2025-11-23T04:53:55.708Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
