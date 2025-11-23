@@ -2,7 +2,7 @@ export const runtime = "edge"
 
 export async function POST(req: Request) {
   try {
-    const { threadId, message, codeContext } = await req.json()
+    const { message, codeContext } = await req.json()
 
     // Build context for AI
     const systemPrompt = `You are an expert code reviewer. You provide constructive, actionable feedback on code.
@@ -31,7 +31,6 @@ User question: ${message}`
         system: systemPrompt,
         prompt: userPrompt,
         temperature: 0.7,
-        maxTokens: 1000,
       }),
     )
 

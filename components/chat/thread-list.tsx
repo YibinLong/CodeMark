@@ -47,7 +47,7 @@ export function ThreadList() {
               <div className="flex items-center gap-2">
                 <MessageSquareIcon className="h-4 w-4 text-[#5B9EFF]" />
                 <span className="text-xs text-[#808080]">
-                  Lines {thread.range.startLine}-{thread.range.endLine}
+                  {thread.range ? `Lines ${thread.range.startLine}-${thread.range.endLine}` : "General Chat"}
                 </span>
               </div>
 
