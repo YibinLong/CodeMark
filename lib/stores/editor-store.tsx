@@ -72,7 +72,21 @@ export default UserProfile`,
         },
       ],
       activeFileId: "example-ts",
-      editorContent: "",
+      editorContent: `// Welcome to CodeMark
+// Select code and right-click to start an AI review thread
+
+interface User {
+  id: string
+  name: string
+  email: string
+}
+
+async function fetchUser(userId: string): Promise<User> {
+  const response = await fetch(\`/api/users/\${userId}\`)
+  return response.json()
+}
+
+export { fetchUser }`,
       selectedRange: null,
       language: "typescript",
 
@@ -106,6 +120,19 @@ export default UserProfile`,
         files: state.files,
         activeFileId: state.activeFileId,
       }),
+      onRehydrateStorage: () => (state) => {
+        // After hydration, load the active file's content into the editor
+        if (state && state.activeFileId) {
+          const file = state.files.find((f) => f.id === state.activeFileId)
+          if (file && file.type === "file") {
+            state.setEditorContent(file.content || "")
+            state.setLanguage(file.language || "typescript")
+          }
+        } else if (state && state.files.length > 0) {
+          // No active file, select the first one
+          state.setActiveFile(state.files[0].id)
+        }
+      },
     },
   ),
 )
