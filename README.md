@@ -1,5 +1,10 @@
 # CodeMark - AI Code Review Assistant
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)
+
 CodeMark is a modern, AI-powered code review assistant that provides block-level code analysis and feedback. Built with Next.js 16, React 19, and OpenAI's GPT models, it offers an intuitive interface for reviewing code with intelligent suggestions and explanations.
 
 ## Features
