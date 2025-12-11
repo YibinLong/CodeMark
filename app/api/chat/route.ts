@@ -1,3 +1,6 @@
+import { openai } from "@ai-sdk/openai"
+import { streamText } from "ai"
+
 export const runtime = "edge"
 
 export async function POST(req: Request) {
@@ -16,23 +19,22 @@ Focus on:
 Be concise but thorough. Use markdown for formatting.`
 
     const userPrompt = `Here's the code context:
-\`\`\`${codeContext.language}
-${codeContext.code}
+\`\`\`${codeContext?.language || 'typescript'}
+${codeContext?.code || ''}
 \`\`\`
 
-Lines: ${codeContext.range.startLine}-${codeContext.range.endLine}
+Lines: ${codeContext?.range?.startLine || 0}-${codeContext?.range?.endLine || 0}
 
 User question: ${message}`
 
     // Call OpenAI API using Vercel AI SDK
-    const { textStream } = await import("ai").then((m) =>
-      m.streamText({
-        model: "openai/gpt-4o-mini",
-        system: systemPrompt,
-        prompt: userPrompt,
-        temperature: 0.7,
-      }),
-    )
+    // openai() automatically reads OPENAI_API_KEY from environment
+    const { textStream } = streamText({
+      model: openai("gpt-4o-mini"),
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.7,
+    })
 
     // Create streaming response
     const encoder = new TextEncoder()
