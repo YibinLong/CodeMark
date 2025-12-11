@@ -15,6 +15,14 @@ interface ThreadState {
     code: string,
     language: string,
   ) => string
+  createThreadWithPendingCode: (
+    fileId: string | undefined,
+    range: CodeRange | undefined,
+    code: string,
+    language: string,
+    defaultPrompt: string,
+  ) => string
+  clearPendingCodeContext: (threadId: string) => void
   openThread: (threadId: string) => void
   closeThread: (threadId: string) => void
   createChat: () => string
@@ -72,6 +80,50 @@ export const useThreadStore = create<ThreadState>()(
         })
 
         return threadId
+      },
+
+      createThreadWithPendingCode: (fileId, range, code, language, defaultPrompt) => {
+        const threadId = `thread-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+        const title = defaultPrompt.slice(0, 30) + (defaultPrompt.length > 30 ? "..." : "")
+
+        const thread: Thread = {
+          id: threadId,
+          fileId,
+          range,
+          messages: [], // No initial message - wait for user input
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          title,
+          pendingCodeContext: {
+            code,
+            language,
+            range,
+            defaultPrompt,
+          },
+        }
+
+        set((state) => {
+          const newThreads = new Map(state.threads)
+          newThreads.set(threadId, thread)
+          const newOpenIds = [...state.openThreadIds, threadId]
+          return { threads: newThreads, activeThreadId: threadId, openThreadIds: newOpenIds }
+        })
+
+        return threadId
+      },
+
+      clearPendingCodeContext: (threadId) => {
+        set((state) => {
+          const thread = state.threads.get(threadId)
+          if (!thread) return state
+
+          const newThread = { ...thread, pendingCodeContext: undefined }
+          const newThreads = new Map(state.threads)
+          newThreads.set(threadId, newThread)
+          return { threads: newThreads }
+        })
       },
 
       createChat: () => {
