@@ -1,10 +1,10 @@
-import type { editor } from "monaco-editor"
+import type { editor, IRange } from "monaco-editor"
 import type { CodeRange } from "./types"
 
 /**
  * Convert Monaco IRange to CodeRange (serializable format)
  */
-export function iRangeToCodeRange(range: editor.IRange): CodeRange {
+export function iRangeToCodeRange(range: IRange): CodeRange {
   return {
     startLine: range.startLineNumber,
     endLine: range.endLineNumber,
@@ -16,7 +16,7 @@ export function iRangeToCodeRange(range: editor.IRange): CodeRange {
 /**
  * Convert CodeRange to Monaco IRange
  */
-export function codeRangeToIRange(range: CodeRange): editor.IRange {
+export function codeRangeToIRange(range: CodeRange): IRange {
   return {
     startLineNumber: range.startLine,
     endLineNumber: range.endLine,
@@ -28,7 +28,7 @@ export function codeRangeToIRange(range: CodeRange): editor.IRange {
 /**
  * Validate if a range is valid (not empty and within bounds)
  */
-export function isValidRange(range: CodeRange | editor.IRange): boolean {
+export function isValidRange(range: CodeRange | IRange): boolean {
   if ("startLine" in range) {
     // CodeRange
     return (
@@ -55,7 +55,7 @@ export function isValidRange(range: CodeRange | editor.IRange): boolean {
  */
 export function getTextFromRange(
   model: editor.ITextModel | null,
-  range: CodeRange | editor.IRange,
+  range: CodeRange | IRange,
 ): string {
   if (!model) return ""
 
@@ -67,7 +67,7 @@ export function getTextFromRange(
 /**
  * Check if a range is a single cursor position (no selection)
  */
-export function isCursorOnly(range: CodeRange | editor.IRange): boolean {
+export function isCursorOnly(range: CodeRange | IRange): boolean {
   if ("startLine" in range) {
     return (
       range.startLine === range.endLine &&
