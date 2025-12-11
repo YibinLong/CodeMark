@@ -1,20 +1,22 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useThreadStore } from "@/lib/stores/thread-store"
 import { useEditorStore } from "@/lib/stores/editor-store"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { MessageBubble } from "./message-bubble"
+import { CodeCitation } from "./code-citation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { SendIcon, Loader2Icon } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function ChatInterface() {
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Track threads that have already had their input pre-filled
+  const prefilledThreads = useRef<Set<string>>(new Set())
 
-  const { threads, activeThreadId, addMessage, updateMessage } = useThreadStore()
+  const { threads, activeThreadId, addMessage, updateMessage, clearPendingCodeContext } = useThreadStore()
   const { language } = useEditorStore()
   const { isLoading, setIsLoading } = useUIStore()
 
@@ -26,44 +28,53 @@ export function ChatInterface() {
     }
   }, [activeThread?.messages])
 
-  const handleSend = async () => {
-    if (!input.trim() || !activeThread || isLoading) return
+  // Pre-fill input when thread has pending code context
+  useEffect(() => {
+    if (!activeThread) return
+    if (prefilledThreads.current.has(activeThread.id)) return
 
-    const userMessage = input.trim()
-    setInput("")
+    if (activeThread.pendingCodeContext?.defaultPrompt) {
+      setInput(activeThread.pendingCodeContext.defaultPrompt)
+      prefilledThreads.current.add(activeThread.id)
+    }
+  }, [activeThread?.id, activeThread?.pendingCodeContext])
 
-    // Add user message
-    addMessage(activeThread.id, {
-      role: "user",
-      content: userMessage,
-    })
+  // Core function to send a message to the AI API
+  const sendToAI = useCallback(async (threadId: string, message: string, codeContext?: { code: string; language: string; range?: { startLine: number; endLine: number; startColumn: number; endColumn: number } }) => {
+    // Use getState() for latest state instead of closure
+    const currentThreads = useThreadStore.getState().threads
+    const thread = currentThreads.get(threadId)
+    if (!thread) return
 
     setIsLoading(true)
 
+    // Store the ID of the AI message we're about to create
+    let aiMessageId: string | null = null
+
     try {
-      // Add placeholder for AI response
-      addMessage(activeThread.id, {
+      // Add placeholder for AI response and capture its ID
+      addMessage(threadId, {
         role: "assistant",
         content: "",
         isStreaming: true,
       })
+
+      // Get the ID of the message we just added (it's the last one)
+      // Use getState() to get the fresh state after addMessage
+      const freshThreads = useThreadStore.getState().threads
+      const freshThread = freshThreads.get(threadId)
+      if (freshThread && freshThread.messages.length > 0) {
+        aiMessageId = freshThread.messages[freshThread.messages.length - 1].id
+      }
 
       // Call AI API
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          threadId: activeThread.id,
-          message: userMessage,
-          codeContext:
-            activeThread.messages[0]?.codeContext ||
-            (activeThread.range
-              ? {
-                  code: activeThread.messages[0]?.codeContext?.code || "", // This might need fix if no messages yet
-                  language: language,
-                  range: activeThread.range,
-                }
-              : undefined),
+          threadId,
+          message,
+          codeContext,
         }),
       })
 
@@ -88,17 +99,13 @@ export function ChatInterface() {
 
               try {
                 const parsed = JSON.parse(data)
-                if (parsed.content) {
+                if (parsed.content && aiMessageId) {
                   aiResponse += parsed.content
-                  // Update the last message with streamed content
-                  const messages = threads.get(activeThread.id)?.messages || []
-                  const lastMessage = messages[messages.length - 1]
-                  if (lastMessage) {
-                    updateMessage(activeThread.id, lastMessage.id, {
-                      content: aiResponse,
-                      isStreaming: true,
-                    })
-                  }
+                  // Update the AI message by its ID (not the last message)
+                  updateMessage(threadId, aiMessageId, {
+                    content: aiResponse,
+                    isStreaming: true,
+                  })
                 }
               } catch (e) {
                 console.error("[v0] Error parsing chunk:", e)
@@ -109,22 +116,60 @@ export function ChatInterface() {
       }
 
       // Mark streaming as complete
-      const messages = threads.get(activeThread.id)?.messages || []
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage) {
-        updateMessage(activeThread.id, lastMessage.id, {
+      if (aiMessageId) {
+        updateMessage(threadId, aiMessageId, {
           isStreaming: false,
         })
       }
     } catch (error) {
       console.error("[v0] Error sending message:", error)
-      addMessage(activeThread.id, {
+      addMessage(threadId, {
         role: "assistant",
         content: "Sorry, I encountered an error. Please try again.",
       })
     } finally {
       setIsLoading(false)
     }
+  }, [addMessage, updateMessage, setIsLoading])
+
+  const handleSend = async () => {
+    if (!input.trim() || !activeThread || isLoading) return
+
+    const userMessage = input.trim()
+    setInput("")
+
+    // Get code context from pending context or first message
+    const pendingContext = activeThread.pendingCodeContext
+    const codeContext = pendingContext
+      ? {
+          code: pendingContext.code,
+          language: pendingContext.language,
+          range: pendingContext.range,
+        }
+      : activeThread.messages[0]?.codeContext ||
+        (activeThread.range
+          ? {
+              code: activeThread.messages[0]?.codeContext?.code || "",
+              language: language,
+              range: activeThread.range,
+            }
+          : undefined)
+
+    // Add user message with code context if this is the first message
+    addMessage(activeThread.id, {
+      role: "user",
+      content: userMessage,
+      ...(pendingContext && activeThread.messages.length === 0
+        ? { codeContext }
+        : {}),
+    })
+
+    // Clear pending context after sending
+    if (pendingContext) {
+      clearPendingCodeContext(activeThread.id)
+    }
+
+    await sendToAI(activeThread.id, userMessage, codeContext)
   }
 
   if (!activeThread) {
@@ -153,9 +198,25 @@ export function ChatInterface() {
         </div>
       )}
 
-      <ScrollArea className="flex-1 bg-[#1e1e1e]">
-        <div ref={scrollRef} className="flex flex-col">
-          {activeThread.messages.length === 0 ? (
+      <div className="flex-1 overflow-y-auto bg-[#1e1e1e]" ref={scrollRef}>
+        <div className="flex flex-col">
+          {/* Show pending code context before any messages are sent */}
+          {activeThread.pendingCodeContext && activeThread.messages.length === 0 && (
+            <div className="px-4 py-3">
+              <div className="mb-2 text-xs text-[#808080]">Selected code to review:</div>
+              <CodeCitation
+                codeContext={{
+                  code: activeThread.pendingCodeContext.code,
+                  language: activeThread.pendingCodeContext.language,
+                  range: activeThread.pendingCodeContext.range,
+                }}
+              />
+              <div className="mt-3 text-sm text-[#606060]">
+                Edit your prompt below and press send to start the review.
+              </div>
+            </div>
+          )}
+          {activeThread.messages.length === 0 && !activeThread.pendingCodeContext ? (
             <div className="flex h-full flex-col items-center justify-center p-8 text-center text-[#606060] mt-20">
               <p className="mb-2">Start a new conversation</p>
             </div>
@@ -163,7 +224,7 @@ export function ChatInterface() {
             activeThread.messages.map((message) => <MessageBubble key={message.id} message={message} />)
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="border-t border-[#2a2a2a] p-4">
         <form
@@ -176,7 +237,7 @@ export function ChatInterface() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a follow-up question..."
+            placeholder={activeThread.pendingCodeContext ? "Enter your prompt..." : "Ask a follow-up question..."}
             disabled={isLoading}
             className="flex-1 bg-[#1a1a1a] border-[#2a2a2a] text-[#b4b4b4] placeholder:text-[#606060]"
           />
