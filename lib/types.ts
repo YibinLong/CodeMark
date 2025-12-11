@@ -36,4 +36,10 @@ export interface Thread {
   createdAt: Date
   updatedAt: Date
   title?: string // Added title for tabs
+  pendingCodeContext?: {
+    code: string
+    language: string
+    range?: CodeRange
+    defaultPrompt?: string // Pre-filled prompt for the input box
+  }
 }
