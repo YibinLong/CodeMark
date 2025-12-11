@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo, useCallback, useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
 import {
   MessageSquareIcon,
@@ -39,7 +39,7 @@ export interface ThreadCardProps {
   className?: string
 }
 
-export function ThreadCard({
+function ThreadCardComponent({
   thread,
   isActive,
   onSelect,
@@ -51,30 +51,32 @@ export function ThreadCard({
   const [isExpanded, setIsExpanded] = useState(isActive)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-  const handleDelete = () => {
+  // Memoize handlers
+  const handleDelete = useCallback(() => {
     setShowDeleteDialog(true)
-  }
+  }, [])
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     onDelete()
     setShowDeleteDialog(false)
-  }
+  }, [onDelete])
 
-  const formatTimestamp = (date: Date) => {
+  // Memoize expensive computations
+  const formatTimestamp = useCallback((date: Date) => {
     try {
       return formatDistanceToNow(date, { addSuffix: true })
     } catch {
       return "recently"
     }
-  }
+  }, [])
 
-  const getMessageIcon = (role: Message["role"]) => {
+  const getMessageIcon = useCallback((role: Message["role"]) => {
     return role === "user" ? (
       <UserIcon className="h-4 w-4 text-[#5B9EFF]" />
     ) : (
       <BotIcon className="h-4 w-4 text-[#4ADE80]" />
     )
-  }
+  }, [])
 
   return (
     <>
@@ -260,3 +262,16 @@ export function ThreadCard({
     </>
   )
 }
+
+// Memoize ThreadCard component to prevent unnecessary re-renders
+// Performance optimization: Only re-render when thread data or state changes
+export const ThreadCard = memo(ThreadCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.thread.id === nextProps.thread.id &&
+    prevProps.thread.updatedAt === nextProps.thread.updatedAt &&
+    prevProps.thread.status === nextProps.thread.status &&
+    prevProps.thread.messages.length === nextProps.thread.messages.length &&
+    prevProps.isActive === nextProps.isActive
+  )
+})
+ThreadCard.displayName = "ThreadCard"
