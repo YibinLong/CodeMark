@@ -21,7 +21,7 @@ export function MonacoEditorWrapper() {
     updateFileContent,
     setSelectedRange,
   } = useEditorStore()
-  const { threads, activeThreadId, getThreadsByFile, createThread, openThread } = useThreadStore()
+  const { threads, activeThreadId, getThreadsByFile, createThreadWithPendingCode, openThread } = useThreadStore()
 
   // Use inline anchors hook for thread decorations
   useInlineAnchors({
@@ -78,8 +78,8 @@ export function MonacoEditorWrapper() {
               endColumn: selection.endColumn,
             })
 
-            // Create a new thread
-            createThread(
+            // Create a new thread with pending code context (no auto-send)
+            createThreadWithPendingCode(
               activeFileId,
               {
                 startLine: selection.startLineNumber,
@@ -87,9 +87,9 @@ export function MonacoEditorWrapper() {
                 startColumn: selection.startColumn,
                 endColumn: selection.endColumn,
               },
-              "Can you review this code?",
               selectedText,
               language,
+              "Can you review this code?",
             )
           }
         }
@@ -117,12 +117,12 @@ export function MonacoEditorWrapper() {
         const selectedText = editor.getModel()?.getValueInRange(selection) || ""
         if (selectedText) {
           const codeRange = iRangeToCodeRange(selection)
-          createThread(
+          createThreadWithPendingCode(
             activeFileId,
             codeRange,
-            "Can you review this code?",
             selectedText,
             language,
+            "Can you review this code?",
           )
         }
       }
