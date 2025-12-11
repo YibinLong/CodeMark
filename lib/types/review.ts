@@ -61,6 +61,10 @@ export interface Thread {
   createdAt: Date;
   /** Timestamp when the thread was last updated */
   updatedAt: Date;
+  /** Timestamp when the thread was resolved (optional) */
+  resolvedAt?: Date;
+  /** Timestamp when the thread was soft-deleted (optional) */
+  deletedAt?: Date;
 }
 
 /**
@@ -144,9 +148,11 @@ export interface SerializedMessage extends Omit<Message, 'createdAt'> {
   createdAt: string;
 }
 
-export interface SerializedThread extends Omit<Thread, 'createdAt' | 'updatedAt' | 'messages'> {
+export interface SerializedThread extends Omit<Thread, 'createdAt' | 'updatedAt' | 'resolvedAt' | 'deletedAt' | 'messages'> {
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string;
+  deletedAt?: string;
   messages: SerializedMessage[];
 }
 

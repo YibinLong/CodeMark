@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useCallback, useMemo } from "react"
 import { ChatInterface } from "../chat/chat-interface"
 import { useThreadStore } from "@/lib/stores/thread-store"
 import { PlusIcon, ClockIcon, MoreHorizontalIcon, XIcon } from "lucide-react"
@@ -7,46 +8,58 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
-export function ChatPanel() {
+function ChatPanelComponent() {
   const { openThreadIds, threads, activeThreadId, setActiveThread, createChat, closeThread } = useThreadStore()
+
+  // Memoize tab click handlers
+  const handleSetActiveThread = useCallback((threadId: string) => {
+    setActiveThread(threadId)
+  }, [setActiveThread])
+
+  const handleCloseThread = useCallback((threadId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    closeThread(threadId)
+  }, [closeThread])
+
+  // Memoize rendered tabs to prevent re-renders
+  const threadTabs = useMemo(() => {
+    return openThreadIds.map((threadId) => {
+      const thread = threads.get(threadId)
+      if (!thread) return null
+      const isActive = threadId === activeThreadId
+
+      return (
+        <div
+          key={threadId}
+          className={cn(
+            "group flex items-center gap-2 rounded-t-md px-3 py-2 text-sm cursor-pointer border-t border-x border-transparent select-none max-w-[150px]",
+            isActive
+              ? "bg-[#1e1e1e] border-[#2a2a2a] text-[#e0e0e0]"
+              : "text-[#808080] hover:bg-[#1a1a1a] hover:text-[#b4b4b4]",
+          )}
+          onClick={() => handleSetActiveThread(threadId)}
+        >
+          <span className="truncate">{thread.title || "New Chat"}</span>
+          <button
+            className={cn(
+              "opacity-0 group-hover:opacity-100 hover:text-white transition-opacity",
+              isActive && "opacity-100",
+            )}
+            onClick={(e) => handleCloseThread(threadId, e)}
+          >
+            <XIcon className="h-3 w-3" />
+          </button>
+        </div>
+      )
+    })
+  }, [openThreadIds, threads, activeThreadId, handleSetActiveThread, handleCloseThread])
 
   return (
     <div className="flex h-full flex-col bg-[#0d0d0d] border-l border-[#2a2a2a]">
       <div className="flex items-center border-b border-[#2a2a2a] bg-[#0d0d0d] pt-1 px-1">
         <ScrollArea className="w-full whitespace-nowrap">
           <div className="flex items-center gap-1 pb-1">
-            {openThreadIds.map((threadId) => {
-              const thread = threads.get(threadId)
-              if (!thread) return null
-              const isActive = threadId === activeThreadId
-
-              return (
-                <div
-                  key={threadId}
-                  className={cn(
-                    "group flex items-center gap-2 rounded-t-md px-3 py-2 text-sm cursor-pointer border-t border-x border-transparent select-none max-w-[150px]",
-                    isActive
-                      ? "bg-[#1e1e1e] border-[#2a2a2a] text-[#e0e0e0]"
-                      : "text-[#808080] hover:bg-[#1a1a1a] hover:text-[#b4b4b4]",
-                  )}
-                  onClick={() => setActiveThread(threadId)}
-                >
-                  <span className="truncate">{thread.title || "New Chat"}</span>
-                  <button
-                    className={cn(
-                      "opacity-0 group-hover:opacity-100 hover:text-white transition-opacity",
-                      isActive && "opacity-100",
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      closeThread(threadId)
-                    }}
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
-                </div>
-              )
-            })}
+            {threadTabs}
           </div>
           <ScrollBar orientation="horizontal" className="h-1.5" />
         </ScrollArea>
@@ -86,3 +99,8 @@ export function ChatPanel() {
     </div>
   )
 }
+
+// Memoize ChatPanel component to prevent unnecessary re-renders
+// Performance optimization: Only re-render when thread state changes
+export const ChatPanel = memo(ChatPanelComponent)
+ChatPanel.displayName = "ChatPanel"

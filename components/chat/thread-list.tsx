@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, memo } from "react"
 import { useDebounce } from "@/lib/hooks/use-debounce"
 import { ThreadListItem } from "./thread-list-item"
 
 type FilterStatus = "all" | "active" | "resolved"
 type SortOption = "date-desc" | "date-asc" | "status" | "messages"
 
-export function ThreadList() {
+function ThreadListComponent() {
   const { threads, activeThreadId, setActiveThread, resolveThread, unresolveThread, deleteThread } = useThreadStore()
   const { activeFileId } = useEditorStore()
 
@@ -22,6 +22,23 @@ export function ThreadList() {
   const [sortOption, setSortOption] = useState<SortOption>("date-desc")
   const [searchQuery, setSearchQuery] = useState("")
   const debouncedSearch = useDebounce(searchQuery, 300)
+
+  // Memoize event handlers to prevent re-renders
+  const handleSelectThread = useCallback((threadId: string) => {
+    setActiveThread(threadId)
+  }, [setActiveThread])
+
+  const handleResolveThread = useCallback((threadId: string) => {
+    resolveThread(threadId)
+  }, [resolveThread])
+
+  const handleUnresolveThread = useCallback((threadId: string) => {
+    unresolveThread(threadId)
+  }, [unresolveThread])
+
+  const handleDeleteThread = useCallback((threadId: string) => {
+    deleteThread(threadId)
+  }, [deleteThread])
 
   // Filter and sort threads
   const filteredAndSortedThreads = useMemo(() => {
@@ -200,10 +217,10 @@ export function ThreadList() {
               key={thread.id}
               thread={thread}
               isActive={activeThreadId === thread.id}
-              onSelect={() => setActiveThread(thread.id)}
-              onResolve={() => resolveThread(thread.id)}
-              onUnresolve={() => unresolveThread(thread.id)}
-              onDelete={() => deleteThread(thread.id)}
+              onSelect={() => handleSelectThread(thread.id)}
+              onResolve={() => handleResolveThread(thread.id)}
+              onUnresolve={() => handleUnresolveThread(thread.id)}
+              onDelete={() => handleDeleteThread(thread.id)}
               enableLazyLoad={filteredAndSortedThreads.length > 20}
             />
           ))
@@ -212,3 +229,8 @@ export function ThreadList() {
     </div>
   )
 }
+
+// Memoize ThreadList component to prevent unnecessary re-renders
+// Performance optimization: Only re-render when thread data changes
+export const ThreadList = memo(ThreadListComponent)
+ThreadList.displayName = "ThreadList"

@@ -18,6 +18,17 @@ import type {
   SerializedMessage,
   SerializedReviewStore,
 } from '../types/review';
+import {
+  getFileFingerprint,
+  loadFromStorage,
+  saveToStorage,
+  setupStorageListener,
+  shouldWarnQuota,
+  getStorageStats,
+  exportData,
+  importData,
+  STORAGE_VERSION,
+} from '../storage';
 
 // ============================================================================
 // Store State Interfaces
@@ -32,6 +43,9 @@ interface ThreadsSlice {
   updateThread: (threadId: string, updates: Partial<Thread>) => void;
   deleteThread: (threadId: string) => void;
   markThreadResolved: (threadId: string) => void;
+  resolveThread: (threadId: string) => void;
+  unresolveThread: (threadId: string) => void;
+  softDeleteThread: (threadId: string) => void;
   addMessageToThread: (threadId: string, message: Message) => void;
 }
 
@@ -72,122 +86,70 @@ const generateId = (prefix: string): string => {
 };
 
 /**
- * Get file fingerprint for namespacing (can be extended to use actual file hash)
+ * Get storage key with fingerprint
  */
-const getFileFingerprint = (): string => {
-  // In a real implementation, this would be based on the current file's path or hash
-  // For now, we'll use the current pathname or a default value
-  if (typeof window !== 'undefined') {
-    return window.location.pathname || 'default';
-  }
-  return 'default';
+const getStorageKey = async (): Promise<string> => {
+  const fingerprint = await getFileFingerprint();
+  return `codemark-threads-${fingerprint}`;
 };
 
 /**
- * Custom storage with error handling and fallback to sessionStorage
+ * Enhanced storage using new storage utilities
  */
-const createResilientStorage = () => {
-  let currentStorage: Storage | null = null;
-
-  // Test storage availability
-  const testStorage = (storage: Storage): boolean => {
-    try {
-      const testKey = '__storage_test__';
-      storage.setItem(testKey, 'test');
-      storage.removeItem(testKey);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // Initialize storage with fallback
-  const getStorage = (): Storage | null => {
-    if (typeof window === 'undefined') return null;
-
-    if (currentStorage) return currentStorage;
-
-    // Try localStorage first
-    if (testStorage(window.localStorage)) {
-      currentStorage = window.localStorage;
-      return currentStorage;
-    }
-
-    // Fallback to sessionStorage
-    if (testStorage(window.sessionStorage)) {
-      console.warn('localStorage unavailable, using sessionStorage as fallback');
-      currentStorage = window.sessionStorage;
-      return currentStorage;
-    }
-
-    console.error('No storage available');
-    return null;
-  };
-
+const createEnhancedStorage = () => {
   return createJSONStorage(() => ({
-    getItem: (name: string) => {
-      const storage = getStorage();
-      if (!storage) return null;
-
+    getItem: async (name: string) => {
       try {
-        const item = storage.getItem(name);
-        return item;
+        // Check quota and warn if needed
+        const warn = await shouldWarnQuota();
+        if (warn) {
+          console.warn('Storage quota approaching limit - consider exporting data');
+        }
+
+        const data = await loadFromStorage(name);
+        if (!data) return null;
+
+        return JSON.stringify(data);
       } catch (error) {
         console.error('Error reading from storage:', error);
         return null;
       }
     },
-    setItem: (name: string, value: string) => {
-      const storage = getStorage();
-      if (!storage) return;
-
+    setItem: async (name: string, value: string) => {
       try {
-        storage.setItem(name, value);
+        const data: SerializedReviewStore = JSON.parse(value);
+
+        // Get file fingerprint for this storage key
+        const fingerprint = await getFileFingerprint();
+
+        // Save with compression for large datasets
+        const shouldCompress = value.length > 10000;
+
+        await saveToStorage(name, data, {
+          compress: shouldCompress,
+          fingerprint,
+        });
+
+        // Log storage stats periodically
+        if (Math.random() < 0.1) {
+          const stats = await getStorageStats();
+          console.log('Storage stats:', stats);
+        }
       } catch (error) {
-        // Handle quota exceeded error
-        if (error instanceof DOMException && (
-          error.name === 'QuotaExceededError' ||
-          error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-        )) {
-          console.warn('Storage quota exceeded, attempting cleanup...');
+        console.error('Error writing to storage:', error);
 
-          // Try to clean up old data
-          try {
-            const keys = Object.keys(storage);
-            const codemarkKeys = keys.filter(k => k.startsWith('codemark-'));
-
-            // Remove oldest entries (simple strategy)
-            if (codemarkKeys.length > 0) {
-              storage.removeItem(codemarkKeys[0]);
-              // Retry setItem
-              storage.setItem(name, value);
-              console.log('Storage cleaned up successfully');
-            }
-          } catch (cleanupError) {
-            console.error('Failed to cleanup storage:', cleanupError);
-
-            // Last resort: try sessionStorage if we were using localStorage
-            if (storage === window.localStorage && testStorage(window.sessionStorage)) {
-              console.warn('Switching to sessionStorage due to quota issues');
-              currentStorage = window.sessionStorage;
-              try {
-                window.sessionStorage.setItem(name, value);
-              } catch (sessionError) {
-                console.error('Failed to save to sessionStorage:', sessionError);
-              }
-            }
-          }
-        } else {
-          console.error('Error writing to storage:', error);
+        // Fallback to basic localStorage if enhanced storage fails
+        try {
+          localStorage.setItem(name, value);
+        } catch (fallbackError) {
+          console.error('Fallback storage also failed:', fallbackError);
         }
       }
     },
-    removeItem: (name: string) => {
-      const storage = getStorage();
-      if (!storage) return;
-
+    removeItem: async (name: string) => {
       try {
-        storage.removeItem(name);
+        localStorage.removeItem(name);
+        localStorage.removeItem(`${name}-compressed`);
       } catch (error) {
         console.error('Error removing from storage:', error);
       }
@@ -206,6 +168,8 @@ const serializeState = (state: ReviewStoreState): SerializedReviewStore => {
       ...thread,
       createdAt: thread.createdAt.toISOString(),
       updatedAt: thread.updatedAt.toISOString(),
+      resolvedAt: thread.resolvedAt?.toISOString(),
+      deletedAt: thread.deletedAt?.toISOString(),
       messages: thread.messages.map(msg => ({
         ...msg,
         createdAt: msg.createdAt.toISOString(),
@@ -236,6 +200,8 @@ const deserializeState = (serialized: SerializedReviewStore): Partial<ReviewStor
       ...thread,
       createdAt: new Date(thread.createdAt),
       updatedAt: new Date(thread.updatedAt),
+      resolvedAt: thread.resolvedAt ? new Date(thread.resolvedAt) : undefined,
+      deletedAt: thread.deletedAt ? new Date(thread.deletedAt) : undefined,
       messages: thread.messages.map(msg => ({
         ...msg,
         createdAt: new Date(msg.createdAt),
@@ -260,28 +226,21 @@ const deserializeState = (serialized: SerializedReviewStore): Partial<ReviewStor
 // ============================================================================
 
 /**
- * Setup cross-tab synchronization using storage events
+ * Setup enhanced cross-tab synchronization using new storage utilities
  */
-const setupCrosTabSync = (storeName: string) => {
+const setupEnhancedCrossTabSync = async () => {
   if (typeof window === 'undefined') return () => {};
 
-  const handleStorageChange = (event: StorageEvent) => {
-    if (event.key === storeName && event.newValue) {
-      try {
-        // Storage event will trigger Zustand's persist middleware to rehydrate
-        window.dispatchEvent(new Event('storage-sync'));
-      } catch (error) {
-        console.error('Error handling cross-tab sync:', error);
-      }
+  const storageKey = await getStorageKey();
+
+  const cleanup = setupStorageListener(storageKey, (data) => {
+    if (data) {
+      // Trigger Zustand rehydration
+      window.dispatchEvent(new Event('storage-sync'));
     }
-  };
+  });
 
-  window.addEventListener('storage', handleStorageChange);
-
-  // Return cleanup function
-  return () => {
-    window.removeEventListener('storage', handleStorageChange);
-  };
+  return cleanup;
 };
 
 // ============================================================================
@@ -350,6 +309,29 @@ export const useReviewStore = create<ReviewStoreState>()(
           updateThread(threadId, { status: ThreadStatus.RESOLVED });
         },
 
+        resolveThread: (threadId: string) => {
+          const { updateThread } = get();
+          updateThread(threadId, {
+            status: ThreadStatus.RESOLVED,
+            resolvedAt: new Date(),
+          });
+        },
+
+        unresolveThread: (threadId: string) => {
+          const { updateThread } = get();
+          updateThread(threadId, {
+            status: ThreadStatus.OPEN,
+            resolvedAt: undefined,
+          });
+        },
+
+        softDeleteThread: (threadId: string) => {
+          const { updateThread } = get();
+          updateThread(threadId, {
+            deletedAt: new Date(),
+          });
+        },
+
         addMessageToThread: (threadId: string, message: Message) => {
           set((state) => {
             const thread = state.threads.get(threadId);
@@ -407,8 +389,8 @@ export const useReviewStore = create<ReviewStoreState>()(
         },
       }),
       {
-        name: `codemark-threads-${getFileFingerprint()}`,
-        storage: createResilientStorage(),
+        name: `codemark-threads-default`, // Will be updated with fingerprint on first access
+        storage: createEnhancedStorage(),
 
         // Partialize to exclude temporary UI state from persistence
         partialize: (state) => ({
@@ -418,25 +400,12 @@ export const useReviewStore = create<ReviewStoreState>()(
           // Exclude composerVisible from persistence
         }),
 
-        // Custom serialization
-        serialize: (state: any) => {
-          const serialized = serializeState(state.state as ReviewStoreState);
-          return JSON.stringify(serialized);
-        },
+        // Version for migration support (using version from storage.ts)
+        version: STORAGE_VERSION,
 
-        // Custom deserialization
-        deserialize: (str: string) => {
-          const parsed = JSON.parse(str);
-          const deserialized = deserializeState(parsed);
-          return { state: deserialized };
-        },
-
-        // Version for migration support
-        version: 1,
-
-        // Migration function for future versions
+        // Migration is now handled by the storage layer
         migrate: (persistedState: unknown, version: number) => {
-          // Add migration logic here when version changes
+          // Migrations are handled in storage.ts
           return persistedState as any;
         },
 
@@ -451,14 +420,12 @@ export const useReviewStore = create<ReviewStoreState>()(
 // Setup Cross-tab Sync
 // ============================================================================
 
-// Initialize cross-tab synchronization
+// Initialize enhanced cross-tab synchronization
 if (typeof window !== 'undefined') {
-  const cleanup = setupCrosTabSync(`codemark-threads-${getFileFingerprint()}`);
-
-  // Store cleanup function for potential later use
-  if (typeof window !== 'undefined') {
+  setupEnhancedCrossTabSync().then((cleanup) => {
+    // Store cleanup function for potential later use
     (window as any).__reviewStoreCleanup = cleanup;
-  }
+  });
 }
 
 // ============================================================================
@@ -517,3 +484,38 @@ export const useUIActions = () => {
     setComposerVisible: state.setComposerVisible,
   }));
 };
+
+// ============================================================================
+// Data Export/Import Utilities
+// ============================================================================
+
+/**
+ * Export current store data to a file
+ */
+export async function exportStoreData(filename?: string): Promise<void> {
+  const state = useReviewStore.getState();
+  const serialized = serializeState(state);
+
+  await exportData(serialized, filename);
+}
+
+/**
+ * Import data from a file and merge with current store
+ */
+export async function importStoreData(file: File): Promise<void> {
+  const imported = await importData(file);
+
+  if (imported) {
+    const deserialized = deserializeState(imported);
+
+    // Merge imported data with current state
+    useReviewStore.setState(deserialized);
+  }
+}
+
+/**
+ * Get current storage statistics
+ */
+export async function getStoreStats() {
+  return getStorageStats();
+}

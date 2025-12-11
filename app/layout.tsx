@@ -1,7 +1,18 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
+import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "sonner"
+import { DevToolsWrapper } from "@/components/DevToolsWrapper"
+import { PerformanceMonitor } from "@/components/PerformanceMonitor"
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
 import "./globals.css"
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
 
 export const metadata: Metadata = {
   title: "CodeMark - AI Code Review Assistant",
@@ -26,6 +37,12 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,9 +50,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         {children}
+        <Toaster position="top-right" />
         <Analytics />
+        <PerformanceMonitor />
+        <ServiceWorkerRegistration />
+        <DevToolsWrapper />
       </body>
     </html>
   )
