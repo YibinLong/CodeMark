@@ -6,6 +6,8 @@ import { UserIcon, BotIcon } from "lucide-react"
 import { CodeCitation } from "./code-citation"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
 
 interface MessageBubbleProps {
   message: Message
@@ -43,7 +45,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 ol: ({ children }) => <ol className="list-decimal list-inside mb-2 text-[#b4b4b4]">{children}</ol>,
                 li: ({ children }) => <li className="ml-2">{children}</li>,
                 code: ({ className, children, ...props }) => {
-                  const isInline = !className
+                  const match = /language-(\w+)/.exec(className || "")
+                  const isInline = !match
                   if (isInline) {
                     return (
                       <code className="bg-[#2a2a2a] text-[#e0e0e0] px-1 py-0.5 rounded text-xs font-mono" {...props}>
@@ -52,12 +55,23 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     )
                   }
                   return (
-                    <code className="block bg-[#1a1a1a] text-[#e0e0e0] p-3 rounded-md overflow-x-auto text-xs font-mono my-2" {...props}>
-                      {children}
-                    </code>
+                    <SyntaxHighlighter
+                      style={vscDarkPlus}
+                      language={match[1]}
+                      PreTag="div"
+                      customStyle={{
+                        margin: "0.5rem 0",
+                        padding: "0.75rem",
+                        borderRadius: "0.375rem",
+                        fontSize: "0.75rem",
+                        backgroundColor: "#1a1a1a",
+                      }}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
                   )
                 },
-                pre: ({ children }) => <pre className="bg-[#1a1a1a] rounded-md overflow-x-auto my-2">{children}</pre>,
+                pre: ({ children }) => <>{children}</>,
                 blockquote: ({ children }) => (
                   <blockquote className="border-l-2 border-[#5B9EFF] pl-3 italic text-[#808080] my-2">
                     {children}

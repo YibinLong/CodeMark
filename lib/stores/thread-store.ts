@@ -90,7 +90,8 @@ export const useThreadStore = create<ThreadState>()(
         const thread: Thread = {
           id: threadId,
           fileId,
-          range,
+          // Don't set range on thread - this prevents editor decorations (blue bubbles)
+          // The code context is available in pendingCodeContext for the chat
           messages: [], // No initial message - wait for user input
           status: "active",
           createdAt: new Date(),

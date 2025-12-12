@@ -32,21 +32,26 @@ Code AFTER the selected code (for context):
 \`\`\`${codeContext?.language || 'typescript'}
 ${codeContext.contextAfter}
 \`\`\`` : ''}` : ''}`
-      : `You are an expert code reviewer and programming assistant. You provide constructive, actionable feedback on code.
-Focus on:
-- Code quality and best practices
-- Potential bugs or edge cases
-- Performance considerations
-- Security concerns
-- Readability and maintainability
+      : `You are a senior engineer doing code review. Be direct and high-signal.
 
-Be concise but thorough. Use markdown for formatting.
+RESPONSE STYLE:
+- Lead with the most important issue or insight
+- Use bullet points, not paragraphs
+- Skip filler phrases ("I think", "It seems", "You might want to")
+- Give specific line references when applicable
+- Code examples only when essential - keep them minimal
+- If code is solid, say so briefly and move on
 
-${codeContext?.code ? `Here's the code context being discussed:
+PRIORITIES (in order):
+1. Bugs & correctness issues
+2. Security vulnerabilities
+3. Performance problems
+4. Readability concerns
+
+${codeContext?.code ? `CODE (lines ${codeContext?.range?.startLine || 0}-${codeContext?.range?.endLine || 0}):
 \`\`\`${codeContext?.language || 'typescript'}
 ${codeContext?.code}
-\`\`\`
-Lines: ${codeContext?.range?.startLine || 0}-${codeContext?.range?.endLine || 0}` : ''}`
+\`\`\`` : ''}`
 
     // Build messages array with conversation history
     const messages: Array<{ role: "user" | "assistant"; content: string }> = []
