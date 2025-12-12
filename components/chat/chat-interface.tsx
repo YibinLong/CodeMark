@@ -7,7 +7,7 @@ import { useUIStore } from "@/lib/stores/ui-store"
 import { MessageBubble } from "./message-bubble"
 import { CodeCitation } from "./code-citation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { SendIcon, Loader2Icon } from "lucide-react"
 
 export function ChatInterface() {
@@ -67,7 +67,16 @@ export function ChatInterface() {
         aiMessageId = freshThread.messages[freshThread.messages.length - 1].id
       }
 
-      // Call AI API
+      // Get conversation history (exclude the streaming AI placeholder we just added)
+      const threadForHistory = useThreadStore.getState().threads.get(threadId)
+      const messageHistory = threadForHistory?.messages
+        .filter(m => !m.isStreaming) // Exclude the placeholder
+        .map(m => ({
+          role: m.role,
+          content: m.content,
+        })) || []
+
+      // Call AI API with conversation history
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +84,7 @@ export function ChatInterface() {
           threadId,
           message,
           codeContext,
+          messageHistory, // Include previous messages for context
         }),
       })
 
@@ -234,17 +244,24 @@ export function ChatInterface() {
           }}
           className="flex gap-2"
         >
-          <Input
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
             placeholder={activeThread.pendingCodeContext ? "Enter your prompt..." : "Ask a follow-up question..."}
             disabled={isLoading}
-            className="flex-1 bg-[#1a1a1a] border-[#2a2a2a] text-[#b4b4b4] placeholder:text-[#606060]"
+            rows={1}
+            className="flex-1 min-h-[40px] max-h-[200px] resize-none bg-[#1a1a1a] border-[#2a2a2a] text-[#b4b4b4] placeholder:text-[#606060]"
           />
           <Button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="bg-[#5B9EFF] hover:bg-[#4a8eef] text-white"
+            className="bg-[#5B9EFF] hover:bg-[#4a8eef] text-white self-end"
           >
             {isLoading ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
           </Button>
