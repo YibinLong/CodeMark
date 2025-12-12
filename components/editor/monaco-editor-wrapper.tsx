@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react"
 import Editor, { type OnMount, type Monaco } from "@monaco-editor/react"
 import { useEditorStore } from "@/lib/stores/editor-store"
 import { useThreadStore } from "@/lib/stores/thread-store"
+import { useQuickEditStore } from "@/lib/stores/quick-edit-store"
 import { iRangeToCodeRange, isCursorOnly } from "@/lib/selection"
 import { useInlineAnchors, inlineAnchorStyles } from "./inline-anchor"
+import { QuickEditPopup } from "./quick-edit/quick-edit-popup"
+import { quickEditStyles } from "./quick-edit/quick-edit-styles"
 import type { editor } from "monaco-editor"
 
 export function MonacoEditorWrapper() {
@@ -22,6 +25,7 @@ export function MonacoEditorWrapper() {
     setSelectedRange,
   } = useEditorStore()
   const { threads, activeThreadId, getThreadsByFile, createThreadWithPendingCode, openThread } = useThreadStore()
+  const { openPopup } = useQuickEditStore()
 
   // Use inline anchors hook for thread decorations
   useInlineAnchors({
@@ -96,6 +100,30 @@ export function MonacoEditorWrapper() {
       },
     })
 
+    // Context menu for Quick Edit
+    editor.addAction({
+      id: "quick-edit",
+      label: "Quick Edit",
+      contextMenuGroupId: "navigation",
+      contextMenuOrder: 1.6,
+      run: (ed) => {
+        const selection = ed.getSelection()
+        if (selection && activeFileId) {
+          const selectedText = ed.getModel()?.getValueInRange(selection) || ""
+          if (selectedText) {
+            const codeRange = {
+              startLine: selection.startLineNumber,
+              endLine: selection.endLineNumber,
+              startColumn: selection.startColumn,
+              endColumn: selection.endColumn,
+            }
+            setSelectedRange(codeRange)
+            openPopup(codeRange, selectedText, activeFileId, language)
+          }
+        }
+      },
+    })
+
     // Selection change listener
     editor.onDidChangeCursorSelection((e) => {
       const selection = e.selection
@@ -153,10 +181,10 @@ export function MonacoEditorWrapper() {
     }
   }
 
-  // Add CSS for thread decorations
+  // Add CSS for thread decorations and quick edit
   useEffect(() => {
     const style = document.createElement("style")
-    style.textContent = inlineAnchorStyles
+    style.textContent = inlineAnchorStyles + quickEditStyles
     document.head.appendChild(style)
     return () => {
       document.head.removeChild(style)
@@ -214,6 +242,7 @@ export function MonacoEditorWrapper() {
           wordWrap: "on",
         }}
       />
+      <QuickEditPopup editor={editorRef.current} monaco={monacoRef.current} />
     </div>
   )
 }
