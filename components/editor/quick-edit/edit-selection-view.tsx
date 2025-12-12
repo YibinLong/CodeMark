@@ -44,10 +44,22 @@ export function EditSelectionView({
     originalCode: selectedText,
   })
 
+  // Store rejectDiff in a ref so cleanup always uses the latest version
+  const rejectDiffRef = useRef(rejectDiff)
+  rejectDiffRef.current = rejectDiff
+
   // Auto-focus input on mount
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()
+    }
+  }, [])
+
+  // Clean up decorations when component unmounts (e.g., popup closes without accept/reject)
+  useEffect(() => {
+    return () => {
+      // If there's a pending diff when unmounting, reject it to clear decorations
+      rejectDiffRef.current()
     }
   }, [])
 
@@ -58,6 +70,32 @@ export function EditSelectionView({
     setIsGenerating(true)
 
     try {
+      // Extract surrounding context from the editor
+      let contextBefore = ""
+      let contextAfter = ""
+
+      if (editor && selection) {
+        const model = editor.getModel()
+        if (model) {
+          const fullContent = model.getValue()
+          const lines = fullContent.split("\n")
+
+          // Get up to 20 lines before the selection for context
+          const startLineIdx = selection.startLine - 1 // 0-indexed
+          const contextStartIdx = Math.max(0, startLineIdx - 20)
+          if (contextStartIdx < startLineIdx) {
+            contextBefore = lines.slice(contextStartIdx, startLineIdx).join("\n")
+          }
+
+          // Get up to 20 lines after the selection for context
+          const endLineIdx = selection.endLine // 0-indexed would be endLine - 1, but we want the line after
+          const contextEndIdx = Math.min(lines.length, endLineIdx + 20)
+          if (endLineIdx < contextEndIdx) {
+            contextAfter = lines.slice(endLineIdx, contextEndIdx).join("\n")
+          }
+        }
+      }
+
       const response = await fetch("/api/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,6 +103,8 @@ export function EditSelectionView({
           code: selectedText,
           language,
           prompt: editPrompt,
+          contextBefore,
+          contextAfter,
         }),
       })
 
@@ -105,11 +145,15 @@ export function EditSelectionView({
         }
       }
 
-      if (fullCode) {
-        setGeneratedCode(fullCode)
-        applyDiff(fullCode)
-        setShowDiff(true)
+      // Handle __DELETE__ marker - convert to empty string for deletion
+      if (fullCode.trim() === "__DELETE__") {
+        fullCode = ""
       }
+
+      // Always show diff, even if fullCode is empty (for deletion)
+      setGeneratedCode(fullCode)
+      applyDiff(fullCode)
+      setShowDiff(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -124,6 +168,8 @@ export function EditSelectionView({
     setGeneratedCode,
     applyDiff,
     setShowDiff,
+    editor,
+    selection,
   ])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

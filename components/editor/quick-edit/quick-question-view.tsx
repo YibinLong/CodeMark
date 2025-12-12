@@ -1,14 +1,22 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import type { editor } from "monaco-editor"
 import { useQuickEditStore } from "@/lib/stores/quick-edit-store"
+import type { CodeRange } from "@/lib/types"
 
 interface QuickQuestionViewProps {
+  editor: editor.IStandaloneCodeEditor | null
+  selection: CodeRange | null
   selectedText: string
   language: string
 }
 
 export function QuickQuestionView({
+  editor,
+  selection,
   selectedText,
   language,
 }: QuickQuestionViewProps) {
@@ -58,6 +66,32 @@ export function QuickQuestionView({
         content: msg.content,
       }))
 
+      // Extract surrounding context from the editor
+      let contextBefore = ""
+      let contextAfter = ""
+
+      if (editor && selection) {
+        const model = editor.getModel()
+        if (model) {
+          const fullContent = model.getValue()
+          const lines = fullContent.split("\n")
+
+          // Get up to 20 lines before the selection for context
+          const startLineIdx = selection.startLine - 1 // 0-indexed
+          const contextStartIdx = Math.max(0, startLineIdx - 20)
+          if (contextStartIdx < startLineIdx) {
+            contextBefore = lines.slice(contextStartIdx, startLineIdx).join("\n")
+          }
+
+          // Get up to 20 lines after the selection for context
+          const endLineIdx = selection.endLine // 0-indexed would be endLine - 1, but we want the line after
+          const contextEndIdx = Math.min(lines.length, endLineIdx + 20)
+          if (endLineIdx < contextEndIdx) {
+            contextAfter = lines.slice(endLineIdx, contextEndIdx).join("\n")
+          }
+        }
+      }
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,8 +100,11 @@ export function QuickQuestionView({
           codeContext: {
             code: selectedText,
             language,
+            contextBefore,
+            contextAfter,
           },
           messageHistory,
+          isQuickQuestion: true,
         }),
       })
 
@@ -137,6 +174,8 @@ export function QuickQuestionView({
     addQAMessage,
     setCurrentQuestion,
     setIsAnswering,
+    editor,
+    selection,
   ])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -159,7 +198,17 @@ export function QuickQuestionView({
                 {msg.role === "user" ? "You" : "AI"}
               </div>
               <div className="quick-edit-qa-content">
-                {msg.content || (isAnswering && index === qaHistory.length - 1 ? "Thinking..." : "")}
+                {msg.content ? (
+                  msg.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )
+                ) : (
+                  isAnswering && index === qaHistory.length - 1 ? "Thinking..." : ""
+                )}
               </div>
             </div>
           ))}

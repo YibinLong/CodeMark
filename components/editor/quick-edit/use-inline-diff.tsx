@@ -14,8 +14,9 @@ interface UseInlineDiffProps {
 
 // Simple line-by-line diff computation
 function computeDiff(original: string, modified: string): DiffLine[] {
-  const originalLines = original.split("\n")
-  const modifiedLines = modified.split("\n")
+  // Handle empty strings specially - "".split("\n") returns [""] not []
+  const originalLines = original === "" ? [] : original.split("\n")
+  const modifiedLines = modified === "" ? [] : modified.split("\n")
   const result: DiffLine[] = []
 
   let oldIdx = 0
@@ -102,7 +103,7 @@ export function useInlineDiff({
   originalCode,
 }: UseInlineDiffProps) {
   const decorationsRef = useRef<string[]>([])
-  const newCodeRef = useRef<string>("")
+  const newCodeRef = useRef<string | null>(null)
 
   const applyDiff = useCallback(
     (newCode: string) => {
@@ -181,7 +182,9 @@ export function useInlineDiff({
   }, [editor])
 
   const acceptDiff = useCallback(() => {
-    if (!editor || !monaco || !selection || !newCodeRef.current) return
+    // Allow empty string for deletion (check for null, not falsy)
+    const newCode = newCodeRef.current
+    if (!editor || !monaco || !selection || newCode === null) return
 
     const model = editor.getModel()
     if (!model) return
@@ -189,7 +192,7 @@ export function useInlineDiff({
     // Clear decorations first
     clearDiff()
 
-    // Replace the selected range with the new code
+    // Replace the selected range with the new code (empty string = deletion)
     const range = new monaco.Range(
       selection.startLine,
       selection.startColumn,
@@ -200,18 +203,18 @@ export function useInlineDiff({
     editor.executeEdits("quick-edit", [
       {
         range,
-        text: newCodeRef.current,
+        text: newCode,
         forceMoveMarkers: true,
       },
     ])
 
     // Clear the stored new code
-    newCodeRef.current = ""
+    newCodeRef.current = null
   }, [editor, monaco, selection, clearDiff])
 
   const rejectDiff = useCallback(() => {
     clearDiff()
-    newCodeRef.current = ""
+    newCodeRef.current = null
   }, [clearDiff])
 
   return {

@@ -251,7 +251,67 @@ export const quickEditStyles = `
     font-size: 13px;
     color: #e0e0e0;
     line-height: 1.5;
-    white-space: pre-wrap;
+  }
+
+  /* Markdown styles for Q&A content */
+  .quick-edit-qa-content p {
+    margin: 0 0 8px 0;
+  }
+
+  .quick-edit-qa-content p:last-child {
+    margin-bottom: 0;
+  }
+
+  .quick-edit-qa-content code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 12px;
+    background: #2a2a2a;
+    padding: 2px 5px;
+    border-radius: 3px;
+    color: #ff9f43;
+  }
+
+  .quick-edit-qa-content pre {
+    margin: 8px 0;
+    padding: 10px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+
+  .quick-edit-qa-content pre code {
+    background: transparent;
+    padding: 0;
+    color: #e0e0e0;
+  }
+
+  .quick-edit-qa-content ul,
+  .quick-edit-qa-content ol {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  .quick-edit-qa-content li {
+    margin: 4px 0;
+  }
+
+  .quick-edit-qa-content strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .quick-edit-qa-content em {
+    color: #b0b0b0;
+    font-style: italic;
+  }
+
+  .quick-edit-qa-content a {
+    color: #5B9EFF;
+    text-decoration: none;
+  }
+
+  .quick-edit-qa-content a:hover {
+    text-decoration: underline;
   }
 
   .quick-edit-qa-user .quick-edit-qa-role {

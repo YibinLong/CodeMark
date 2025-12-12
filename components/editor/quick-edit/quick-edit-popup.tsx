@@ -163,6 +163,8 @@ export function QuickEditPopup({ editor, monaco }: QuickEditPopupProps) {
           />
         ) : (
           <QuickQuestionView
+            editor={editor}
+            selection={selection}
             selectedText={selectedText}
             language={language}
           />

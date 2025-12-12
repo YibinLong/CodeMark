@@ -5,10 +5,34 @@ export const runtime = "edge"
 
 export async function POST(req: Request) {
   try {
-    const { message, codeContext, messageHistory = [] } = await req.json()
+    const { message, codeContext, messageHistory = [], isQuickQuestion = false } = await req.json()
 
     // Build system prompt with code context
-    const systemPrompt = `You are an expert code reviewer and programming assistant. You provide constructive, actionable feedback on code.
+    const systemPrompt = isQuickQuestion
+      ? `You are a concise code assistant. Give brief, high-signal answers.
+
+RULES:
+- Be extremely succinct - 2-4 sentences max unless code is needed
+- Skip pleasantries and filler words
+- Use bullet points for multiple items
+- Only include code if essential
+- Focus on the single most important point
+
+${codeContext?.code ? `${codeContext?.contextBefore ? `Code BEFORE the selected code (for context):
+\`\`\`${codeContext?.language || 'typescript'}
+${codeContext.contextBefore}
+\`\`\`
+
+` : ''}SELECTED code the user is asking about:
+\`\`\`${codeContext?.language || 'typescript'}
+${codeContext?.code}
+\`\`\`${codeContext?.contextAfter ? `
+
+Code AFTER the selected code (for context):
+\`\`\`${codeContext?.language || 'typescript'}
+${codeContext.contextAfter}
+\`\`\`` : ''}` : ''}`
+      : `You are an expert code reviewer and programming assistant. You provide constructive, actionable feedback on code.
 Focus on:
 - Code quality and best practices
 - Potential bugs or edge cases

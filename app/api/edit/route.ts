@@ -5,34 +5,51 @@ export const runtime = "edge"
 
 export async function POST(req: Request) {
   try {
-    const { code, language, prompt } = await req.json()
+    const { code, language, prompt, contextBefore, contextAfter } = await req.json()
 
-    if (!code || !prompt) {
-      return new Response(JSON.stringify({ error: "Missing code or prompt" }), {
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: "Missing prompt" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       })
     }
 
-    const systemPrompt = `You are a code editing assistant. Your task is to edit the provided code according to the user's instructions.
+    // Build context section if available
+    let contextSection = ""
+    if (contextBefore || contextAfter) {
+      contextSection = `
+SURROUNDING CONTEXT (for reference only - do NOT include this in your output):
+${contextBefore ? `--- Code BEFORE selection ---
+${contextBefore}
+--- End of code before ---` : ""}
+
+${contextAfter ? `--- Code AFTER selection ---
+${contextAfter}
+--- End of code after ---` : ""}
+`
+    }
+
+    const systemPrompt = `You are a code editing assistant. Your task is to edit the provided selected code according to the user's instructions.
 
 IMPORTANT RULES:
-1. Output ONLY the edited code - no explanations, no markdown code blocks, no commentary
+1. Output ONLY the replacement for the selected code - no explanations, no markdown code blocks, no commentary
 2. Preserve the original indentation style and formatting
 3. Make minimal changes to achieve the user's goal
 4. If the instruction is unclear, make a reasonable interpretation
 5. Do not add comments unless explicitly asked
 6. Maintain the same programming style as the original code
+7. If the user wants to DELETE the code (e.g., "delete", "remove", "delete all"), output EXACTLY the string: __DELETE__
+8. Use the surrounding context to understand how the selected code fits into the larger codebase, but only output the replacement for the selected portion
 
 The code is written in ${language || "typescript"}.`
 
-    const userPrompt = `Here is the code to edit:
-
-${code}
+    const userPrompt = `${contextSection}
+SELECTED CODE TO EDIT:
+${code || "(empty selection)"}
 
 Instructions: ${prompt}
 
-Output only the edited code:`
+Output only the replacement for the selected code (or __DELETE__ if the code should be removed):`
 
     const { textStream } = streamText({
       model: openai("gpt-4o-mini"),

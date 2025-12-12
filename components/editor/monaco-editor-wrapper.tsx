@@ -236,7 +236,7 @@ export function MonacoEditorWrapper() {
           folding: true,
           lineDecorationsWidth: 10,
           lineNumbersMinChars: 3,
-          scrollBeyondLastLine: false,
+          scrollBeyondLastLine: true,
           automaticLayout: true,
           tabSize: 2,
           wordWrap: "on",
