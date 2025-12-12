@@ -43,3 +43,16 @@ export interface Thread {
     defaultPrompt?: string // Pre-filled prompt for the input box
   }
 }
+
+// Quick Edit types
+export interface DiffLine {
+  type: "add" | "remove" | "unchanged"
+  content: string
+  oldLineNumber?: number
+  newLineNumber?: number
+}
+
+export interface DiffResult {
+  lines: DiffLine[]
+  hasChanges: boolean
+}
